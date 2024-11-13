@@ -1,5 +1,5 @@
 import cv2
-import numpy as np
+import numpy
 
 # 读取图片
 image = cv2.imread('E:\python project\picture-detect\shapes.png')
