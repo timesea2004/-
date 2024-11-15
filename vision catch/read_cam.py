@@ -7,7 +7,7 @@ import msvcrt
 from ctypes import *
 import time
 
-sys.path.append("C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport")
+sys.path.append("D:\MVS\Development\Samples\Python\MvImport")
 from MvCameraControl_class import *
 
 if __name__ == "__main__":
