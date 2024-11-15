@@ -2,7 +2,7 @@ import cv2
 import numpy
 
 # 读取图片
-image = cv2.imread('E:\python project\picture-detect\shapes.png')
+image = cv2.imread('E:\python project\picture-detect\image.jpg')
 # 转换为灰度图像
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
