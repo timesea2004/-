@@ -1,13 +1,11 @@
 # -- coding: utf-8 --
 
 import sys
-import copy
-import msvcrt
-
-from ctypes import *
 import time
+from ctypes import *
 
-sys.path.append("D:\MVS\Development\Samples\Python\MvImport")
+
+sys.path.append("E:\python project\picture-detect\MvImport")
 from MvCameraControl_class import *
 
 if __name__ == "__main__":
