@@ -1,11 +1,11 @@
 import cv2
 import numpy as np
 
-def detect_defects(image_path):
-    # 读取图像
+def detect_defect_contours(image_path):
+    # 读取图片
     image = cv2.imread(image_path)
     if image is None:
-        raise ValueError("图像加载失败，请检查路径是否正确")
+        raise FileNotFoundError(f"Image not found at {image_path}")
 
     # 转换为灰度图
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -13,59 +13,51 @@ def detect_defects(image_path):
     # 应用高斯模糊来减少噪声
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-    # 使用Otsu's二值化方法将图像转换为二值图像
-    _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # 使用Otsu's二值化方法自动确定阈值
+    _, binary = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-    # 反转图像，使得药片区域为白色，背景为黑色（假设药片是亮的）
-    binary = cv2.bitwise_not(binary)
-
-    # 查找轮廓
+    # 寻找轮廓
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # 创建一个用于绘制瑕疵的副本图像
+    # 创建一个空白图像用于绘制瑕疵和中心点
     defect_image = image.copy()
 
-    # 存储瑕疵药片的位置（假设为轮廓的边界框）
-    defect_positions = []
+    defect_centers = []
 
     for contour in contours:
-        # 计算轮廓的边界框
-        x, y, w, h = cv2.boundingRect(contour)
+        # 假设最大的轮廓是药片本身，我们可以忽略它
+        # 如果你想检测药片内部的缺陷，你需要进一步处理每个轮廓内部的像素
+        # 这里我们简化问题，只检测药片外部的“缺陷”（可能是背景噪声或真正的外部缺陷）
+        # 或者，你可以根据轮廓大小、形状等特征来区分药片和真正的缺陷
 
-        # 假设药片区域应该有一定的尺寸范围，过滤掉太小的区域（可能是噪声）
-        if w > 10 and h > 10:  # 这些值可能需要根据实际情况调整
-            # 在原图上绘制轮廓（用于可视化瑕疵）
-            cv2.rectangle(defect_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        # 暂时，我们假设所有小轮廓都是缺陷（这是一个简化的假设）
+        if cv2.contourArea(contour) < 1000:  # 这是一个示例阈值，需要根据实际情况调整
+            # 计算轮廓的矩
+            M = cv2.moments(contour)
+            if M["m00"] != 0:
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+            else:
+                cX, cY = 0, 0
 
-            # 在药片内部查找瑕疵（例如，暗斑或亮点）
-            # 这里简单地使用阈值分割来找到与药片主体颜色不同的区域
-            mask = np.zeros_like(gray)
-            cv2.drawContours(mask, [contour], -1, 255, -1)  # 填充轮廓内部为白色
-            mask_inv = cv2.bitwise_not(mask)  # 反转掩码，得到药片外部区域
+            # 在缺陷中心画红点
+            cv2.circle(defect_image, (cX, cY), 5, (0, 0, 255), -1)
+            defect_centers.append((cX, cY))
 
-            # 计算药片内部区域的灰度值直方图，并找到可能的瑕疵阈值
-            # 这里为了简化，直接使用全局阈值进行分割，可能需要根据实际情况调整
-            drug_area = cv2.bitwise_and(gray, gray, mask=mask)
-            _, defect_binary = cv2.threshold(drug_area, 200, 255, cv2.THRESH_BINARY_INV)  # 假设瑕疵比药片暗
+        # 如果你想进一步分析每个轮廓内部的像素来检测内部缺陷，
+        # 你可以在这里添加额外的代码来处理每个轮廓内部的区域。
+        # 例如，你可以使用形态学操作、连通域分析等。
 
-            # 查找瑕疵轮廓
-            defect_contours, _ = cv2.findContours(defect_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            for defect_contour in defect_contours:
-                # 在副本图像上绘制瑕疵轮廓
-                cv2.drawContours(defect_image, [defect_contour], -1, (0, 255, 0), 1)
-
-            # 保存瑕疵药片的位置
-            defect_positions.append((x, y, w, h))
-
-    # 显示结果图像
-    cv2.namedWindow('Defective Pills',cv2.WINDOW_NORMAL)
-    cv2.imshow('Defective Pills', defect_image)
+    # 显示结果
+    cv2.namedWindow('Defects', cv2.WINDOW_NORMAL)
+    cv2.imshow("Defects", defect_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-    # 输出瑕疵药片的位置
-    for pos in defect_positions:
-        print(f"Defective pill position: x={pos[0]}, y={pos[1]}, width={pos[2]}, height={pos[3]}")
+    # 输出红点的位置
+    for center in defect_centers:
+        print(f"Defect center: ({center[0]}, {center[1]})")
 
-# 调用函数并传入图像路径
-detect_defects('E:\python project\picture-detect\image.png')  # 替换为你的图像路径
+
+image_path = "E:\python project\picture-detect\canvey.bmp"  # 替换为你的图片路径
+detect_defect_contours(image_path)
